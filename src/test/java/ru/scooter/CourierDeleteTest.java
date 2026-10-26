@@ -45,4 +45,3 @@ public class CourierDeleteTest {
                 .statusCode(404);
     }
 }
-

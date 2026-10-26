@@ -101,4 +101,3 @@ public class CourierCreateTest {
                 .statusCode(409);
     }
 }
-

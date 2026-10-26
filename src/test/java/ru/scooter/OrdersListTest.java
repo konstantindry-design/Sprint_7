@@ -22,4 +22,3 @@ public class OrdersListTest {
                 .body("orders", notNullValue());
     }
 }
-

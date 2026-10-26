@@ -31,4 +31,3 @@ public class Courier {
         return new Courier("courier" + time, "pass" + time, "Саша");
     }
 }
-
