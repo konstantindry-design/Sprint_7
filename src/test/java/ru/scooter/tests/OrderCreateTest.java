@@ -1,9 +1,13 @@
-package ru.scooter;
+package ru.scooter.tests;
 
 import io.qameta.allure.junit4.DisplayName;
+import org.apache.http.HttpStatus;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import ru.scooter.models.Order;
+import ru.scooter.steps.OrderClient;
 
 import java.util.Arrays;
 import java.util.List;
@@ -29,15 +33,18 @@ public class OrderCreateTest {
         };
     }
 
+    @Before
+    public void setUp() {
+        orderClient = new OrderClient();
+    }
+
     @Test
     @DisplayName("Заказ можно создать с разными вариантами цвета")
     public void orderCanBeCreated() {
-        orderClient = new OrderClient();
-        Order order = new Order("Иван", "Иванов", "Ленинградский проспект, 1", 4,
-                "+79990001122", 3, "2026-11-01", "Позвонить за час", color);
+        Order order = Order.random(color);
 
         orderClient.create(order)
-                .statusCode(201)
+                .statusCode(HttpStatus.SC_CREATED)
                 .body("track", notNullValue());
     }
 }

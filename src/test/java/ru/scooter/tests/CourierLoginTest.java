@@ -1,9 +1,14 @@
-package ru.scooter;
+package ru.scooter.tests;
 
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.ValidatableResponse;
+import org.apache.http.HttpStatus;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import ru.scooter.models.Courier;
+import ru.scooter.models.CourierCredentials;
+import ru.scooter.steps.CourierClient;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -16,14 +21,26 @@ public class CourierLoginTest {
     public void setUp() {
         courierClient = new CourierClient();
         courier = Courier.random();
-        courierClient.create(courier).statusCode(201);
+        courierClient.create(courier).statusCode(HttpStatus.SC_CREATED);
+    }
+
+    @After
+    public void tearDown() {
+        if (courier != null) {
+            ValidatableResponse loginResponse = courierClient.login(CourierCredentials.from(courier));
+            Integer id = loginResponse.extract().path("id");
+            if (id != null) {
+                courierClient.delete(id);
+            }
+            courier = null;
+        }
     }
 
     @Test
     @DisplayName("Курьер может авторизоваться")
     public void courierCanLogin() {
         courierClient.login(CourierCredentials.from(courier))
-                .statusCode(200)
+                .statusCode(HttpStatus.SC_OK)
                 .body("id", notNullValue());
     }
 
@@ -31,7 +48,7 @@ public class CourierLoginTest {
     @DisplayName("Логин возвращает id")
     public void loginReturnsId() {
         ValidatableResponse response = courierClient.login(CourierCredentials.from(courier));
-        response.statusCode(200);
+        response.statusCode(HttpStatus.SC_OK);
         int id = response.extract().path("id");
         org.junit.Assert.assertTrue(id > 0);
     }
@@ -41,7 +58,8 @@ public class CourierLoginTest {
     public void loginWithWrongPassword() {
         CourierCredentials credentials = new CourierCredentials(courier.getLogin(), "wrongPass");
         courierClient.login(credentials)
-                .statusCode(404);
+                .statusCode(HttpStatus.SC_NOT_FOUND)
+                .body("message", equalTo("Учетная запись не найдена"));
     }
 
     @Test
@@ -49,7 +67,8 @@ public class CourierLoginTest {
     public void loginWithWrongLogin() {
         CourierCredentials credentials = new CourierCredentials("wrongLogin", courier.getPassword());
         courierClient.login(credentials)
-                .statusCode(404);
+                .statusCode(HttpStatus.SC_NOT_FOUND)
+                .body("message", equalTo("Учетная запись не найдена"));
     }
 
     @Test
@@ -57,7 +76,8 @@ public class CourierLoginTest {
     public void loginWithoutPassword() {
         CourierCredentials credentials = new CourierCredentials(courier.getLogin(), null);
         courierClient.login(credentials)
-                .statusCode(504);
+                .statusCode(HttpStatus.SC_BAD_REQUEST)
+                .body("message", equalTo("Недостаточно данных для входа"));
     }
 
     @Test
@@ -65,7 +85,8 @@ public class CourierLoginTest {
     public void loginWithoutLogin() {
         CourierCredentials credentials = new CourierCredentials(null, courier.getPassword());
         courierClient.login(credentials)
-                .statusCode(400);
+                .statusCode(HttpStatus.SC_BAD_REQUEST)
+                .body("message", equalTo("Недостаточно данных для входа"));
     }
 
     @Test
@@ -73,6 +94,7 @@ public class CourierLoginTest {
     public void loginNonExistentUser() {
         CourierCredentials credentials = new CourierCredentials("nonexistent" + System.currentTimeMillis(), "pass123");
         courierClient.login(credentials)
-                .statusCode(404);
+                .statusCode(HttpStatus.SC_NOT_FOUND)
+                .body("message", equalTo("Учетная запись не найдена"));
     }
 }

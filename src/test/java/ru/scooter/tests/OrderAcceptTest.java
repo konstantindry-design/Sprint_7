@@ -1,10 +1,16 @@
-package ru.scooter;
+package ru.scooter.tests;
 
 import io.qameta.allure.junit4.DisplayName;
+import org.apache.http.HttpStatus;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import ru.scooter.models.Courier;
+import ru.scooter.models.CourierCredentials;
+import ru.scooter.models.Order;
+import ru.scooter.steps.CourierClient;
+import ru.scooter.steps.OrderClient;
 
 import java.util.Arrays;
 
@@ -22,12 +28,11 @@ public class OrderAcceptTest {
         courierClient = new CourierClient();
         orderClient = new OrderClient();
         courier = Courier.random();
-        courierClient.create(courier).statusCode(201);
+        courierClient.create(courier).statusCode(HttpStatus.SC_CREATED);
         courierId = courierClient.login(CourierCredentials.from(courier))
                 .extract()
                 .path("id");
-        Order order = new Order("Иван", "Иванов", "Ленинградский проспект, 1", 4,
-                "+79990001122", 3, "2026-11-01", "Позвонить за час", Arrays.asList("BLACK"));
+        Order order = Order.random(Arrays.asList("BLACK"));
         int track = orderClient.create(order)
                 .extract()
                 .path("track");
@@ -59,7 +64,7 @@ public class OrderAcceptTest {
     @DisplayName("Заказ можно принять")
     public void orderCanBeAccepted() {
         orderClient.accept(orderId, courierId)
-                .statusCode(200)
+                .statusCode(HttpStatus.SC_OK)
                 .body("ok", equalTo(true));
     }
 
@@ -67,27 +72,27 @@ public class OrderAcceptTest {
     @DisplayName("Ошибка без id курьера")
     public void acceptWithoutCourierId() {
         orderClient.accept(orderId, null)
-                .statusCode(400);
+                .statusCode(HttpStatus.SC_BAD_REQUEST);
     }
 
     @Test
     @DisplayName("Ошибка с неверным id курьера")
     public void acceptWithWrongCourierId() {
         orderClient.accept(orderId, 999999999)
-                .statusCode(404);
+                .statusCode(HttpStatus.SC_NOT_FOUND);
     }
 
     @Test
     @DisplayName("Ошибка без номера заказа")
     public void acceptWithoutOrderId() {
         orderClient.accept(null, courierId)
-                .statusCode(404);
+                .statusCode(HttpStatus.SC_NOT_FOUND);
     }
 
     @Test
     @DisplayName("Ошибка с неверным номером заказа")
     public void acceptWithWrongOrderId() {
         orderClient.accept(999999999, courierId)
-                .statusCode(404);
+                .statusCode(HttpStatus.SC_NOT_FOUND);
     }
 }

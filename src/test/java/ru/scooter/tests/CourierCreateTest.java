@@ -1,10 +1,14 @@
-package ru.scooter;
+package ru.scooter.tests;
 
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.ValidatableResponse;
+import org.apache.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import ru.scooter.models.Courier;
+import ru.scooter.models.CourierCredentials;
+import ru.scooter.steps.CourierClient;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -35,7 +39,7 @@ public class CourierCreateTest {
     public void courierCanBeCreated() {
         courier = Courier.random();
         courierClient.create(courier)
-                .statusCode(201)
+                .statusCode(HttpStatus.SC_CREATED)
                 .body("ok", equalTo(true));
     }
 
@@ -44,12 +48,13 @@ public class CourierCreateTest {
     public void duplicateCourierIsNotAllowed() {
         courier = Courier.random();
         courierClient.create(courier)
-                .statusCode(201)
+                .statusCode(HttpStatus.SC_CREATED)
                 .body("ok", equalTo(true));
 
         Courier duplicate = new Courier(courier.getLogin(), "anotherPass", "Лёша");
         courierClient.create(duplicate)
-                .statusCode(409);
+                .statusCode(HttpStatus.SC_CONFLICT)
+                .body("message", equalTo("Этот логин уже используется. Попробуйте другой."));
     }
 
     @Test
@@ -58,7 +63,8 @@ public class CourierCreateTest {
         courier = null;
         Courier courierWithoutLogin = new Courier(null, "pass123", "Саша");
         courierClient.create(courierWithoutLogin)
-                .statusCode(400);
+                .statusCode(HttpStatus.SC_BAD_REQUEST)
+                .body("message", equalTo("Недостаточно данных для создания учетной записи"));
     }
 
     @Test
@@ -67,7 +73,8 @@ public class CourierCreateTest {
         courier = null;
         Courier courierWithoutPassword = new Courier("courier" + System.currentTimeMillis(), null, "Саша");
         courierClient.create(courierWithoutPassword)
-                .statusCode(400);
+                .statusCode(HttpStatus.SC_BAD_REQUEST)
+                .body("message", equalTo("Недостаточно данных для создания учетной записи"));
     }
 
     @Test
@@ -75,7 +82,7 @@ public class CourierCreateTest {
     public void createCourierWithoutFirstName() {
         courier = new Courier("courier" + System.currentTimeMillis(), "pass123", null);
         courierClient.create(courier)
-                .statusCode(201)
+                .statusCode(HttpStatus.SC_CREATED)
                 .body("ok", equalTo(true));
     }
 
@@ -84,7 +91,7 @@ public class CourierCreateTest {
     public void successfulCreateReturnsOk() {
         courier = Courier.random();
         ValidatableResponse response = courierClient.create(courier);
-        response.statusCode(201);
+        response.statusCode(HttpStatus.SC_CREATED);
         response.body("ok", notNullValue());
         response.body("ok", equalTo(true));
     }
@@ -94,10 +101,12 @@ public class CourierCreateTest {
     public void createCourierWithExistingLogin() {
         courier = Courier.random();
         courierClient.create(courier)
-                .statusCode(201);
+                .statusCode(HttpStatus.SC_CREATED);
 
         Courier sameLogin = new Courier(courier.getLogin(), "pass" + System.currentTimeMillis(), "Лёша");
         courierClient.create(sameLogin)
-                .statusCode(409);
+                .statusCode(HttpStatus.SC_CONFLICT)
+                .body("message", equalTo("Этот логин уже используется. Попробуйте другой."));
     }
 }
+
